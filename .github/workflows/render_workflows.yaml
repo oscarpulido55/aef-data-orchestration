@@ -12,8 +12,8 @@ on:
 
 
 jobs:
-  terraform-plan:
-    name: Terraform Plan "${{ inputs.environment }}"
+  render:
+    name: Render Templates "${{ inputs.environment }}"
     runs-on: ${{ inputs.target_runner }}
     steps:
       # Checkout the repository
@@ -26,7 +26,7 @@ jobs:
           python ./orchestration_generator.py -w ../workflow-definitions -c ../config/dev.tfvars.json
 
       # Save rendered templates to artifacts
-      - name: Publish Terraform Plan (${{ inputs.environment }})
+      - name: Publish Rendered Workflows (${{ inputs.environment }})
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.environment }}-rendered-templates

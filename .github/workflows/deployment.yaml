@@ -24,6 +24,7 @@ jobs:
       target_runner: ${{ vars.TARGET_RUNNER }}
   
   tf-plan:
+    needs: [render-workflows]
     uses: ./.github/workflows/tf_plan_template.yaml
     with:
       environment: dev
