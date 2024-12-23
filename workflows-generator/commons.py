@@ -12,26 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import os
-
-# def usage(args_expected, extension):
-#     """ method to explain usage"""
-#     if len(sys.argv) < args_expected + 1:
-#         print('!Error, number of arguments passed=' + str(len(sys.argv) - 1) + ' expected=' + str(
-#             args_expected))
-#         print('...Usage: ' + sys.argv[
-#             0] + ' <workflow_file>.json <parameters-file>.json <result-file>.' + extension + ' '
-#                  '<gcp-account-number> <deploy-for-pipeline(True|False)')
-#         sys.exit(0)
-
-
-# def process_config_key_values(config_array):
-#     """method for config key values"""
-#     result = {}
-#     for pair in config_array:
-#         result[pair.get("ParameterKey")] = pair.get("ParameterValue")
-#     return result
 
 
 def read_template(template, generate_for_pipeline, templates_folder, file_extension):

@@ -67,6 +67,13 @@ Steps for local `terraform` execution are below:
         terraform apply [ENVIRONMENT].plan
     ```
 
+### CICD
+
+Currently only GitHub Actions has been configured in the repository to render the templates and deploy the infrastructure.
+
+In order to enable this, Workload Identity Federation needs to be established. See the following blog for the required setup steps: https://cloud.google.com/blog/products/identity-security/enabling-keyless-authentication-from-github-actions.
+
+
 
 **NOTE**: It is highly recommended if deploying to setup a backend for the terraform state files to allow for teams to work and adjust the configurations as required.
 
