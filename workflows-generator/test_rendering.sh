@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-WORKFLOW=demo_pipeline_cloud_workflows
-
 python3 orchestration_generator.py \
-../workflow-definitions/$WORKFLOW.json \
-../workflow-definitions/platform-parameters-dev.json \
-../cloud-workflows/$WORKFLOW.yaml \
-False
+    -w ../workflow-definitions/ \
+    -c ../config/dev.tfvars.json

@@ -25,41 +25,57 @@ This approach enables data analysts to build intricate data pipelines and reliab
 
 ## Usage
 ### Manual Execution
-This script processes a JSON-formatted data pipeline definition (specifying levels, threads, and steps) and generates deployment-ready code for your chosen orchestration platform:
+This script processes a JSON-formatted data pipeline definition (specifying levels, threads, and steps) and generates deployment-ready code for your chosen orchestration platform.
+
+**Note**: There is a dependency on the JSON formatted `tfvars` located at `config`. The workflow or DAGs will be rendered subject the value tied to the `deploy_cloud_workflows` and `deploy_composer_dags` variables contained within the `tfvars` file respectively. 
+
 - ***Cloud Workflows***: Produces a [source file](https://cloud.google.com/workflows/docs/reference/syntax#file_structure) that incorporates robust error handling, retry mechanisms, and cyclical execution. It invokes step executors as Cloud Functions --pre-deployed in your project, typically using the [Orchestration framework repository](https://github.com/oscarpulido55/aef-orchestration-framework)--.
 - ***Cloud Composer/Airflow***: Generates an Airflow DAG that leverages Google Cloud operators to execute the pipeline steps as defined in the JSON definition.
 Both options rely on predefined [templates](https://github.com/oscarpulido55/aef-data-orchestration/tree/main/workflows-generator) to streamline the code generation process.
-```shell
-python3 workflows_generator.py \
-../workflow-definitions/etl_example_1.json \
-../workflow-definitions/platform-parameters-dev.json \
-workflows_etl_example_1.json \
-False
+```bash
+    python3 orchestration_generator.py \
+        -w ../workflow-definitions/ \
+        -c ../config/dev.tfvars.json
 ```
 ### Terraform
-The provided Terraform code enables reading defined JSON data pipelines definitions and managing the deployment of the resulting Cloud Workflows or Composer DAGs. In addition to the example using Terraform's `null_resource` to generate Cloud Workflows, these workflows can also be generated and deployed as a separate step within your CI/CD pipeline.
-1. Locate your JSON data pipeline definition files in the repository.
-```
-├── workflow-definitions
-│   ├── demo_pipeline.json
-│   └── ...
-```
-2. Define your terraform variables.  It is recommended creating a `.tfvars` file.
-<!-- BEGIN TFDOC -->
-| name                                                      | description                                                                                                                                                           | type        | required | default                 |
-|-----------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------|----------|--------------------------|
-| [project](terraform/variables.tf#L17)                     | Project where the cloud workflows or Composer DAGs will be created.                                                                                                   | string      | true     | -                       |
-| [region](terraform/variables.tf#L23)                      | Region where the AEF data orchestration workflows will be deployed.                                                                                                   | string      | true     | -                       |
-| [environment](terraform/variables.tf#L29)                 | AEF environment. Will be used to create the parameters file for Cloud Workflows: **platform-parameters-$ENVIRONMENT.json**                                            | string      | true     | -                       |
-| [data_transformation_project](terraform/variables.tf#L35) | Project where the data transformation jobs definitions reside (will be used to infer bucket storing job parameter json files).                                        | string      | true     | -                       |
-| [deploy_cloud_workflows](terraform/variables.tf#L41)      | Controls whether cloud workflows is generated and deployed alongside Terraform resources. If false cloud workflows can be deployed as a next step in a CICD pipeline. | bool        | false    | `true`                  |
-| [deploy_composer_dags](terraform/variables.tf#L48)        | Controls whether Airflow DAGs are generated and deployed alongside Terraform resources. If false DAGs could be deployed as a next step in a CICD pipeline.            | bool        | false    | `false`                 |
-| [create_composer_environment](terraform/variables.tf#L55) | Controls whether a composer environment will be created, If false and **deploy_composer_dags** set to **true**, then **composer_bucket_name** needs to be set.        | bool        | false    | `false`                 |
-| [composer_bucket_name](terraform/variables.tf#L62)        | If Composer environment is not created and deploy_composer_dags is set to true, then this will be used to upload DAGs to.                                             | string      | false    | -                       |
-| [composer_config](terraform/variables.tf#L69)             | Cloud Composer config.                                                                                                                                                | object      | false    | `{}`                    |
-| [workflows_log_level](terraform/variables.tf#L120)        | Describes the level of platform logging to apply to calls and call responses during executions of cloud workflows                                                     | string      | false    | `LOG_ERRORS_ONLY` |
-<!-- END TFDOC -->
+The provided Terraform code enables reading defined JSON data pipelines definitions and managing the deployment of the resulting Cloud Workflows or Composer DAGs. 
 
+The Composer DAGs and/or the Cloud Workflows need to be rendered before executing any `terraform` commands.
+
+Steps for local `terraform` execution are below:
+
+1. Locate your JSON data pipeline definition files in the repository and navigate to that location in a terminal.
+    ```
+    ├── workflow-definitions
+    │   ├── demo_pipeline.json
+    │   └── ...
+    ```
+1. Define your terraform variables for the environment & render the templates by executing the following command:
+    ```bash
+        python3 orchestration_generator.py \
+            -w ../workflow-definitions/ \
+            -c ../config/[ENVIRONMENT].tfvars.json
+    ```
+    The `[ENVIRONMENT]` value above needs to be changed to the relevant environment's `tfvars` file.
+
+1. Initialise, plan and apply terraform as needed:
+
+    ```bash
+        cd terraform
+        terraform init
+        terraform plan --var-file ../config/[ENVIRONMENT].tfvars.json -out [ENVIRONMENT].plan
+        terraform apply [ENVIRONMENT].plan
+    ```
+
+### CICD
+
+Currently only GitHub Actions has been configured in the repository to render the templates and deploy the infrastructure.
+
+In order to enable this, Workload Identity Federation needs to be established. See the following blog for the required setup steps: https://cloud.google.com/blog/products/identity-security/enabling-keyless-authentication-from-github-actions.
+
+
+
+**NOTE**: It is highly recommended if deploying to setup a backend for the terraform state files to allow for teams to work and adjust the configurations as required.
 
 ### Domain-Based vs. Central Orchestration
 

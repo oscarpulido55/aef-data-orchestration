@@ -1,0 +1,39 @@
+# terraform deployment workflow
+name: AEF Data Orchestration
+
+on:
+  push:
+    branches:
+      - main
+
+# OIDC Permissions
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+  # TODO: If wanting to integrate with GitHub then need to enable GitHub Advanced Security
+  # security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+  # actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+
+jobs:
+  render-workflows:
+    uses: ./.github/workflows/render_workflows.yaml
+    with:
+      environment: dev
+      target_runner: ${{ vars.TARGET_RUNNER }}
+  
+  tf-plan:
+    needs: [render-workflows]
+    uses: ./.github/workflows/tf_plan_template.yaml
+    with:
+      environment: dev
+      target_runner: ${{ vars.TARGET_RUNNER }}
+    secrets: inherit
+
+  tf-apply:
+    needs: [tf-plan]
+    uses: ./.github/workflows/tf_apply_template.yaml
+    with:
+      environment: dev
+      target_runner: ${{ vars.TARGET_RUNNER }}
+    secrets: inherit
