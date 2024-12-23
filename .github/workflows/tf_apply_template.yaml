@@ -18,8 +18,6 @@ jobs:
   terraform-apply:
     name: Terraform Apply "${{ inputs.environment }}"
     runs-on: ${{ inputs.target_runner }}
-    environment:
-      name: ${{ inputs.environment }}
     steps:
       # Checkout the repository
       - name: Checkout
@@ -41,7 +39,7 @@ jobs:
       # Terraform Initialise
       - name: Terraform Init (${{ inputs.environment }})
         run: |
-          cd ${{ inputs.environment }}/
+          cd terraform
           rm -rf .terraform/ | true
           terraform init
 
@@ -49,11 +47,11 @@ jobs:
       - name: Download Terraform Plan
         uses: actions/download-artifact@v4
         with:
-          name: tfplan-${{ inputs.environment }}
-          path: ${{ inputs.environment }}/tfplan-${{ inputs.environment }}
+          name: ${{ inputs.environment }}-tfplandataorch
+          path: ./terraform/${{ inputs.environment }}-tfplandataorch
 
       # Terraform Apply
       - name: Terraform Apply (${{ inputs.environment }})
         run: |
-          cd ${{ inputs.environment }}/
-          terraform apply -auto-approve tfplan-${{ inputs.environment }}/tfplan-${{ inputs.environment }}
+          cd terraform
+          terraform apply -auto-approve ${{ inputs.environment }}-tfplandataorch

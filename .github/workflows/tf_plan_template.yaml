@@ -24,8 +24,6 @@ jobs:
   terraform-plan:
     name: Terraform Plan "${{ inputs.environment }}"
     runs-on: ${{ inputs.target_runner }}
-    environment:
-      name: ${{ inputs.environment}}_vars
     outputs:
       tfplan_exit_code: "${{ steps.tf-plan.outputs.exitcode }}"
       composer_change: "${{ steps.composer-change.outputs.composer_change }}"
