@@ -21,86 +21,36 @@ data "google_project" "project" {
 # ------------------------------------------------------
 # Cloud Workflows deployment
 # ------------------------------------------------------
-resource "local_file" "parameters_file" {
-  filename = "../workflow-definitions/platform-parameters-${var.environment}.json"
-  content  = jsonencode(local.workflows_generator_params)
-}
-
-resource "null_resource" "deploy_cloud_workflows" {
-  for_each = var.deploy_cloud_workflows ? local.cloud_workflows_filenames : []
-  provisioner "local-exec" {
-    command = <<EOF
-      python3 ../workflows-generator/orchestration_generator.py \
-      ../workflow-definitions/${each.value} \
-      ../workflow-definitions/platform-parameters-${var.environment}.json \
-      ../cloud-workflows/${each.value} \
-      False
-    EOF
-  }
-  triggers = {
-    always_run = timestamp()
-  }
-  depends_on = [local_file.parameters_file]
-}
 
 resource "google_workflows_workflow" "workflows" {
-  for_each        = var.deploy_cloud_workflows ? local.cloud_workflows_filenames : []
-  name            = replace(each.value, ".json", "")
-  region          = var.region
-  project         = var.project
-  call_log_level  = var.workflows_log_level
-  source_contents = data.local_file.workflow[each.value].content
-  depends_on = [data.local_file.workflow]
+  for_each            = var.deploy_cloud_workflows ? local.cloud_workflows_filenames : []
+  name                = replace(each.value, ".json", "")
+  call_log_level      = var.workflows_log_level
+  source_contents     = data.local_file.workflow[each.value].content
+  deletion_protection = var.workflows_deletion_protection
+  depends_on          = [google_project_service.gcp_services]
 }
 
 data "local_file" "workflow" {
   for_each = var.deploy_cloud_workflows ? local.cloud_workflows_filenames : []
   filename = "../cloud-workflows/${each.value}"
-  depends_on = [null_resource.deploy_cloud_workflows]
 }
 
 # ------------------------------------------------------
 # Cloud Composer deployment
 # ------------------------------------------------------
-resource "null_resource" "deploy_composer_dags" {
-  for_each = var.deploy_composer_dags ? local.composer_filenames : []
-  provisioner "local-exec" {
-    command = <<EOF
-      python3 ../workflows-generator/orchestration_generator.py \
-      ../workflow-definitions/${each.value} \
-      ../workflow-definitions/platform-parameters-${var.environment}.json \
-      ../composer-dags/${replace(each.value, ".json", ".py")} \
-      False
-    EOF
-  }
-  triggers = {
-    always_run = timestamp()
-  }
-  depends_on = [local_file.parameters_file]
-}
 
-resource "google_storage_bucket_object" "uploaded_artifacts_aef_composer" {
-  for_each = var.deploy_composer_dags  && var.composer_bucket_name == null ? fileset("../composer-dags/", "**/*") : []
+resource "google_storage_bucket_object" "uploaded_artifacts_composer" {
+  for_each = var.deploy_composer_dags ? fileset("../composer-dags/", "**/*") : []
   name     = "dags/${each.key}"
-  bucket   = "${replace(replace(google_composer_environment.aef_composer_environment[0].config[0].dag_gcs_prefix, "gs://", ""),"/dags","")}"
+  bucket   = var.composer_bucket_name != null ? "gs://${var.composer_bucket_name}" : replace(replace(google_composer_environment.aef_composer_environment[0].config[0].dag_gcs_prefix, "gs://", ""), "/dags", "")
   source   = "../composer-dags/${each.key}"
-  depends_on = [google_composer_environment.aef_composer_environment, null_resource.deploy_composer_dags]
-}
-
-resource "google_storage_bucket_object" "uploaded_artifacts_external_composer" {
-  for_each = var.deploy_composer_dags  && var.composer_bucket_name != null ? fileset("../composer-dags/", "**/*") : []
-  name     = "dags/${each.key}"
-  bucket   = "gs://${var.composer_bucket_name}"
-  source   = "../composer-dags/${each.key}"
-  depends_on = [null_resource.deploy_composer_dags]
 }
 
 resource "google_composer_environment" "aef_composer_environment" {
   count    = var.create_composer_environment == true ? 1 : 0
   provider = google-beta
-  project  = var.project
   name     = "aef-${var.project}-${var.environment}"
-  region   = var.region
   config {
     software_config {
       airflow_config_overrides = var.composer_config.software_config.airflow_config_overrides
@@ -131,9 +81,9 @@ resource "google_composer_environment" "aef_composer_environment" {
         max_count  = var.composer_config.workloads_config.worker.max_count
       }
       triggerer {
-        cpu        = var.composer_config.workloads_config.worker.cpu
-        memory_gb  = var.composer_config.workloads_config.worker.memory_gb
-        count      = var.composer_config.workloads_config.scheduler.count
+        cpu       = var.composer_config.workloads_config.worker.cpu
+        memory_gb = var.composer_config.workloads_config.worker.memory_gb
+        count     = var.composer_config.workloads_config.scheduler.count
       }
     }
 
@@ -176,7 +126,7 @@ resource "google_composer_environment" "aef_composer_environment" {
 }
 
 module "composer-service-account" {
-  count    = var.create_composer_environment == true ? 1 : 0
+  count      = var.create_composer_environment == true ? 1 : 0
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/iam-service-account"
   project_id = var.project
   name       = "aef-composer${var.environment}-sa"
@@ -195,7 +145,7 @@ module "composer-service-account" {
 }
 
 module "dataproc-service-account" {
-  count    = var.create_composer_environment == true ? 1 : 0
+  count      = var.create_composer_environment == true ? 1 : 0
   source     = "github.com/GoogleCloudPlatform/cloud-foundation-fabric/modules/iam-service-account"
   project_id = var.project
   name       = "aef-dataproc${var.environment}-sa"
@@ -209,10 +159,10 @@ module "dataproc-service-account" {
 }
 
 resource "google_service_account_iam_member" "custom_service_account" {
-  count    = var.create_composer_environment == true ? 1 : 0
-  provider = google-beta
+  count              = var.create_composer_environment == true ? 1 : 0
+  provider           = google-beta
   service_account_id = module.composer-service-account[0].name
-  role = "roles/composer.ServiceAgentV2Ext"
-  member = "serviceAccount:service-${data.google_project.project.number}@cloudcomposer-accounts.iam.gserviceaccount.com"
-  depends_on = [module.composer-service-account]
+  role               = "roles/composer.ServiceAgentV2Ext"
+  member             = "serviceAccount:service-${data.google_project.project.number}@cloudcomposer-accounts.iam.gserviceaccount.com"
+  depends_on         = [module.composer-service-account]
 }

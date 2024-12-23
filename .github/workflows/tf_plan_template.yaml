@@ -48,6 +48,13 @@ jobs:
           service_account: "${{ vars.SERVICE_ACCOUNT }}"
           workload_identity_provider: "${{ secrets.wifprovider }}"
 
+      # Download the rendered templates
+      - name: Download Rendered templates
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.environment }}-rendered-templates
+          path: ./ 
+
       # Terraform Initialise
       - name: Terraform Init (${{ inputs.environment }})
         run: |
@@ -61,7 +68,7 @@ jobs:
         id: tf-plan
         run: |
           cd terraform
-          terraform plan -detailed-exitcode -no-color -out=${{ inputs.environment }}-tfplandataorch -var-file="prod.tfvars"
+          terraform plan -detailed-exitcode -no-color -out=${{ inputs.environment }}-tfplandataorch -var-file="../config/${{ inputs.environment }}.tfvars"
 
       # Save plan to artifacts
       - name: Publish Terraform Plan (${{ inputs.environment }})

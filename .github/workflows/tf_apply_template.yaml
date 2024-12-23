@@ -1,0 +1,59 @@
+name: Base Terraform Apply Template
+
+on:
+  workflow_call:
+    secrets:
+      wifprovider:
+        required: true
+
+    inputs:
+      environment:
+        required: true
+        type: string
+      target_runner:
+        required: true
+        type: string
+
+jobs:
+  terraform-apply:
+    name: Terraform Apply "${{ inputs.environment }}"
+    runs-on: ${{ inputs.target_runner }}
+    environment:
+      name: ${{ inputs.environment }}
+    steps:
+      # Checkout the repository
+      - name: Checkout
+        uses: "actions/checkout@v4"
+
+      # Install Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # Authenticate to GCP
+      - name: Google Auth
+        id: auth
+        uses: "google-github-actions/auth@v2"
+        with:
+          project_id: "${{ vars.PROJECT_ID }}"
+          service_account: "${{ vars.SERVICE_ACCOUNT }}"
+          workload_identity_provider: "${{ secrets.wifprovider }}"
+
+      # Terraform Initialise
+      - name: Terraform Init (${{ inputs.environment }})
+        run: |
+          cd ${{ inputs.environment }}/
+          rm -rf .terraform/ | true
+          terraform init
+
+      # Download the saved plan from artifacts
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ inputs.environment }}
+          path: ${{ inputs.environment }}/tfplan-${{ inputs.environment }}
+
+      # Terraform Apply
+      - name: Terraform Apply (${{ inputs.environment }})
+        run: |
+          cd ${{ inputs.environment }}/
+          terraform apply -auto-approve tfplan-${{ inputs.environment }}/tfplan-${{ inputs.environment }}

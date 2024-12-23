@@ -26,14 +26,30 @@ variable "region" {
   nullable    = false
 }
 
+variable "enable_services" {
+  description = "List of the services to enable. NOTE: Recommend this be done via the primary orchestration repository so leave blank where possible"
+  type        = list(string)
+}
+
 variable "environment" {
   description = "AEF environment. Will be used to create the parameters file for Cloud Workflows: platform-parameters-<<environment>>.json"
   type        = string
   nullable    = false
 }
 
+variable "workflows_deletion_protection" {
+  description = "Flag for whether to protect against deletion of workflows"
+  type        = bool
+}
+
 variable "data_transformation_project" {
   description = "Project where the data transformation jobs definitions reside (will be used to infer bucket storing job parameter json files)."
+  type        = string
+  nullable    = false
+}
+
+variable "jobs_definition_bucket_suffix" {
+  description = "Suffix for the bucket that will hold the data transformation configurations"
   type        = string
   nullable    = false
 }
@@ -68,7 +84,7 @@ variable "composer_bucket_name" {
 
 variable "composer_config" {
   description = "Cloud Composer config."
-  type        = object({
+  type = object({
     vpc                     = optional(string)
     subnet                  = optional(string)
     connection_subnetwork   = optional(string)
@@ -77,7 +93,7 @@ variable "composer_config" {
     service_encryption_keys = optional(string)
 
     environment_size = optional(string)
-    software_config  = optional(object({
+    software_config = optional(object({
       airflow_config_overrides       = optional(map(string), {})
       pypi_packages                  = optional(map(string), {})
       env_variables                  = optional(map(string), {})
@@ -85,13 +101,13 @@ variable "composer_config" {
       cloud_data_lineage_integration = optional(bool, true)
     }), {})
     web_server_access_control = optional(map(string), {})
-    workloads_config          = optional(object({
+    workloads_config = optional(object({
       scheduler = optional(object({
         cpu        = optional(number)
         memory_gb  = optional(number)
         storage_gb = optional(number)
         count      = optional(number)
-      }
+        }
       ), {})
       web_server = optional(object({
         cpu        = optional(number)
@@ -99,9 +115,9 @@ variable "composer_config" {
         storage_gb = optional(number)
       }), {})
       triggerer = optional(object({
-        cpu        = optional(number)
-        memory_gb  = optional(number)
-        count      = optional(number)
+        cpu       = optional(number)
+        memory_gb = optional(number)
+        count     = optional(number)
       }), {})
       worker = optional(object({
         cpu        = optional(number)
@@ -109,7 +125,7 @@ variable "composer_config" {
         storage_gb = optional(number)
         min_count  = optional(number)
         max_count  = optional(number)
-      }
+        }
       ), {})
     }), {})
   })

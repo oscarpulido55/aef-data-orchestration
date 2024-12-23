@@ -1,0 +1,35 @@
+name: Render Workflow Templates
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      target_runner:
+        required: true
+        type: string
+
+
+jobs:
+  terraform-plan:
+    name: Terraform Plan "${{ inputs.environment }}"
+    runs-on: ${{ inputs.target_runner }}
+    steps:
+      # Checkout the repository
+      - name: Checkout
+        uses: "actions/checkout@v4"
+
+      - name: RenderWorkflows
+        run: |
+          cd workflows-generator
+          python ./orchestration_generator.py -w ../workflow-definitions -c ../config/dev.tfvars.json
+
+      # Save rendered templates to artifacts
+      - name: Publish Terraform Plan (${{ inputs.environment }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.environment }}-rendered-templates
+          path: |
+            ./cloud-workflows
+            ./composer-dags

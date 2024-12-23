@@ -22,34 +22,16 @@ locals {
 
   cloud_workflows_filenames = toset([
     for filename, file_content in local.workflow_files : filename
-    if (try(file_content.engine, null) == "cloud_workflows")
+    if(try(file_content.engine, null) == "cloud_workflows")
   ])
 
   composer_filenames = toset([
     for filename, file_content in local.workflow_files : filename
-    if (try(file_content.engine, null) == "composer")
+    if(try(file_content.engine, null) == "composer")
   ])
 
-  workflows_generator_params = [
-    {
-      "ParameterKey" : "pRegion",
-      "ParameterValue" : var.region
-    },
-    {
-      "ParameterKey" : "pProjectID",
-      "ParameterValue" : var.project
-    },
-    {
-      "ParameterKey" : "pFunctionIntermediateName",
-      "ParameterValue" : "orch-framework-intermediate"
-    },
-    {
-      "ParameterKey" : "pJobsDefinitionsBucket",
-      "ParameterValue" : "${var.data_transformation_project}_aef_jobs_bucket"
-    }
-  ]
   _env_variables = {
-    DATA_TRANSFORMATION_GCS_BUCKET = "${var.data_transformation_project}_aef_jobs_bucket"
+    DATA_TRANSFORMATION_GCS_BUCKET = "${var.data_transformation_project}_${var.jobs_definition_bucket_suffix}"
   }
 
   composer_env_variables = {

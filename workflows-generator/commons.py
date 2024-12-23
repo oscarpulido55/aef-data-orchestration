@@ -15,40 +15,59 @@
 import sys
 import os
 
-def usage(args_expected, extension):
-    """ method to explain usage"""
-    if len(sys.argv) < args_expected + 1:
-        print('!Error, number of arguments passed=' + str(len(sys.argv) - 1) + ' expected=' + str(
-            args_expected))
-        print('...Usage: ' + sys.argv[
-            0] + ' <workflow_file>.json <parameters-file>.json <result-file>.' + extension + ' '
-                 '<gcp-account-number> <deploy-for-pipeline(True|False)')
-        sys.exit(0)
+# def usage(args_expected, extension):
+#     """ method to explain usage"""
+#     if len(sys.argv) < args_expected + 1:
+#         print('!Error, number of arguments passed=' + str(len(sys.argv) - 1) + ' expected=' + str(
+#             args_expected))
+#         print('...Usage: ' + sys.argv[
+#             0] + ' <workflow_file>.json <parameters-file>.json <result-file>.' + extension + ' '
+#                  '<gcp-account-number> <deploy-for-pipeline(True|False)')
+#         sys.exit(0)
 
-def process_config_key_values(config_array):
-    """method for config key values"""
-    result = {}
-    for pair in config_array:
-        result[pair.get("ParameterKey")] = pair.get("ParameterValue")
-    return result
+
+# def process_config_key_values(config_array):
+#     """method for config key values"""
+#     result = {}
+#     for pair in config_array:
+#         result[pair.get("ParameterKey")] = pair.get("ParameterValue")
+#     return result
 
 
 def read_template(template, generate_for_pipeline, templates_folder, file_extension):
     """method to read templates"""
     try:
         if generate_for_pipeline:
-            with open(os.path.dirname(__file__) + "/"+templates_folder+"/" + template + '.'+file_extension, 'r',
-                      encoding="utf-8") as file:
+            with open(
+                os.path.dirname(__file__)
+                + "/"
+                + templates_folder
+                + "/"
+                + template
+                + "."
+                + file_extension,
+                "r",
+                encoding="utf-8",
+            ) as file:
                 data = file.read()
                 return data
         else:
-            with open(os.getcwd() + "/"+templates_folder+"/" + template + '.' + file_extension, 'r', encoding="utf-8") \
-                    as file:
+            with open(
+                os.getcwd()
+                + "/"
+                + templates_folder
+                + "/"
+                + template
+                + "."
+                + file_extension,
+                "r",
+                encoding="utf-8",
+            ) as file:
                 data = file.read()
                 return data
 
     except Exception as err:
-        print('Error reading template file: ' + str(type(err)))
+        print("Error reading template file: " + str(type(err)))
         raise err
 
 
@@ -61,11 +80,13 @@ def find_step_by_id(step_id, workflow_config):
                     return step
     return None
 
+
 def level_exists(level_number, workflow_config):
     for level in workflow_config:
         if int(level.get("LEVEL_ID")) == level_number:
             return True
     return False
+
 
 def level_exists_and_is_parallel(level_number, workflow_config):
     for level in workflow_config:
@@ -73,7 +94,6 @@ def level_exists_and_is_parallel(level_number, workflow_config):
             if len(level.get("THREADS")) > 1:
                 return True
     return False
-
 
 
 def write_result(output_file, content):
@@ -92,7 +112,7 @@ def write_result(output_file, content):
         file_out.write(content)
         file_out.close()
     except Exception as err:
-        print('Error writing on output file: ' + str(type(err)))
+        print("Error writing on output file: " + str(type(err)))
         raise err
 
 
@@ -103,8 +123,8 @@ def assemble_cloud_function_id(name, exec_config):
     :return: if of the cloud function
     ej: "https://us-central1-dp-111-orc.cloudfunctions.net/async-function"
     """
-    project_id = exec_config.get("pProjectID")
-    region = exec_config.get("pRegion")
+    project_id = exec_config.get("project")
+    region = exec_config.get("region")
     return f"https://{region}-{project_id}.cloudfunctions.net/{name}"
 
 
@@ -114,6 +134,6 @@ def assemble_workflows_id(name, exec_config):
     :param name: name of the Cloud Workflow
     :return: workflows id
     """
-    project_id = exec_config.get("pProjectID")
-    region = exec_config.get("pRegion")
+    project_id = exec_config.get("project")
+    region = exec_config.get("region")
     return f"projects/{project_id}/locations/{region}/workflows/{name}"

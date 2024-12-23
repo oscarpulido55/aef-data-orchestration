@@ -13,52 +13,137 @@
 # limitations under the License.
 
 import json
-from commons import *
+import argparse
+from pathlib import Path
+import shutil
+
+from commons import write_result
 from ComposerDagGenerator import ComposerDagGenerator
 from WorkflowsGenerator import WorkflowsGenerator
 
-def main():
+ENCODING = "utf-8"
+
+CURRENT_FILE_DIR = Path(__file__).resolve()
+CURRENT_WORKNG_DIR = Path.cwd()
+
+
+def workflows_generator(
+    workflow_file: str,
+    exec_config: dict,
+    workflows_output_dir: str,
+    composer_output_dir: str,
+    generate_for_pipeline: bool,
+):
     """
     Main function for workflows generator
 
     :param workflow_file: Json definition file in the form of THREADS and STEPS
-    :param config_file: Json parameters file
-    :param output_file: Cloud Workflows generated file
+    :param exec_config: Json parameters
+    :param workflows_output_dir: Cloud Workflows output directory
+    :params composer_output_dir: Composer output directory
     :param generate_for_pipeline: Boolean to identify if the run is part of a CICD pipeline
     :return: NA
     """
-    encoding = "utf-8"
-    workflow_file = sys.argv[1]
-    with open(workflow_file, encoding=encoding) as json_file:
+    workflow_file_path = Path(workflow_file)
+
+    with open(workflow_file, encoding=ENCODING) as json_file:
         workflow_config = json.load(json_file)
-    if workflow_config.get("engine") == 'cloud_workflows':
-        usage(4,'json')
-    else:
-        usage(4,'py')
-    json_file_name = workflow_file.split("/")[-1].split(".")[0]
-    config_file = sys.argv[2]
-    output_file = sys.argv[3]
-    generate_for_pipeline = bool(sys.argv[4])
 
-    if generate_for_pipeline:
-        with open(os.path.dirname(__file__) + '/' + config_file, encoding=encoding) as json_file:
-            exec_config = json.load(json_file)
-    else:
-        with open(os.getcwd() + '/' + config_file, encoding=encoding) as json_file:
-            exec_config = json.load(json_file)
-    exec_config = process_config_key_values(exec_config)
+    json_file_name = Path(workflow_file).stem
+
     generator = None
-    if workflow_config.get("engine") == 'cloud_workflows':
-        workflow_config = workflow_config.get("definition")
-        generator = WorkflowsGenerator(workflow_config, exec_config, generate_for_pipeline, config_file)
+    workflow_definition = workflow_config.get("definition")
+    output_file = workflow_file_path.name
+
+    if (
+        exec_config.get("deploy_cloud_workflows")
+        and workflow_config.get("engine") == "cloud_workflows"
+    ):
+        generator = WorkflowsGenerator(
+            workflow_definition, exec_config, generate_for_pipeline
+        )
+        output_file = f"{workflows_output_dir}/{output_file}"
+    elif (
+        exec_config.get("deploy_composer_dags")
+        and workflow_config.get("engine") == "composer"
+    ):
+        generator = ComposerDagGenerator(
+            workflow_definition,
+            exec_config,
+            generate_for_pipeline,
+            json_file_name,
+        )
+        output_file = output_file.replace(".json", ".py")
+        output_file = f"{composer_output_dir}/{output_file}"
+
+    if generator:
         generator.load_templates()
-    elif workflow_config.get("engine") == 'composer':
-        workflow_config = workflow_config.get("definition")
-        generator = ComposerDagGenerator(workflow_config, exec_config,
-                                         generate_for_pipeline, config_file, json_file_name)
-        generator.load_templates()
-    workflow_body = generator.generate_workflows_body()
-    write_result(output_file, workflow_body)
+        workflow_body = generator.generate_workflows_body()
+        write_result(output_file, workflow_body)
 
 
-main()
+def run():
+    """
+    Entrypoint function to parse arguments as needed
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-w",
+        "--workflow_dir",
+        help="Path of the workflow file",
+        required=True,
+        type=str,
+    )
+    parser.add_argument(
+        "-c", "--config_file", help="Path of the config file", required=True, type=str
+    )
+    parser.add_argument(
+        "-o",
+        "--workflows_output_dir",
+        help="Path of the workflows output directory",
+        required=False,
+        type=str,
+        default="../cloud-workflows",
+    )
+    parser.add_argument(
+        "-d",
+        "--composer_output_dir",
+        help="Path of the composer dags output directory",
+        required=False,
+        type=str,
+        default="../composer-dags",
+    )
+    parser.add_argument(
+        "-g",
+        "--generate_for_pipeline",
+        help="Flag for whether to generate the execution config",
+        action="store_true",
+    )
+
+    args = parser.parse_args()
+
+    exec_config_path = (
+        f"{CURRENT_FILE_DIR}/{args.config_file}"
+        if args.generate_for_pipeline
+        else f"{CURRENT_WORKNG_DIR}/{args.config_file}"
+    )
+    with open(exec_config_path, encoding=ENCODING) as fp:
+        exec_config = json.load(fp)
+
+    # Clean up output directories
+    shutil.rmtree(args.workflows_output_dir, ignore_errors=True)
+    shutil.rmtree(args.composer_output_dir, ignore_errors=True)
+
+    for filename in Path(args.workflow_dir).glob("**/*"):
+        if filename.is_file():
+            workflows_generator(
+                filename,
+                exec_config,
+                args.workflows_output_dir,
+                args.composer_output_dir,
+                args.generate_for_pipeline,
+            )
+
+
+if __name__ == "__main__":
+    run()
