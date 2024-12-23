@@ -31,14 +31,10 @@ jobs:
       target_runner: ${{ vars.TARGET_RUNNER }}
     secrets: inherit
 
-  # tf-apply:
-  #   needs: [tf-plan]
-  #   if: |
-  #     always() &&
-  #     needs.tf-plan.result == 'success' &&
-  #     (needs.archive-composer-bucket-objects.result == 'success' || needs.create-composer-snapshot.result == 'skipped')
-  #   uses: ./.github/workflows/tf_apply_template.yaml
-  #   with:
-  #     environment: staging
-  #     target_runner: ${{ vars.TARGET_RUNNER }}
-  #   secrets: inherit
+  tf-apply:
+    needs: [tf-plan]
+    uses: ./.github/workflows/tf_apply_template.yaml
+    with:
+      environment: dev
+      target_runner: ${{ vars.TARGET_RUNNER }}
+    secrets: inherit
