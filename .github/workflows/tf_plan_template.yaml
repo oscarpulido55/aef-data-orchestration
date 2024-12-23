@@ -68,7 +68,7 @@ jobs:
         id: tf-plan
         run: |
           cd terraform
-          terraform plan -detailed-exitcode -no-color -out=${{ inputs.environment }}-tfplandataorch -var-file="../config/${{ inputs.environment }}.tfvars"
+          terraform plan -detailed-exitcode -no-color -out=${{ inputs.environment }}-tfplandataorch -var-file="../config/${{ inputs.environment }}.tfvars.json"
 
       # Save plan to artifacts
       - name: Publish Terraform Plan (${{ inputs.environment }})
