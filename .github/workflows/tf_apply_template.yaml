@@ -54,4 +54,4 @@ jobs:
       - name: Terraform Apply (${{ inputs.environment }})
         run: |
           cd terraform
-          terraform apply -auto-approve ${{ inputs.environment }}-tfplandataorch
+          terraform apply -auto-approve ${{ inputs.environment }}-tfplandataorch/${{ inputs.environment }}-tfplandataorch
