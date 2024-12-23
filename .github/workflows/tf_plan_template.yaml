@@ -82,7 +82,7 @@ jobs:
         id: tf-plan-string
         run: |
           cd terraform
-          TERRAFORM_PLAN=$(terraform plan -detailed-exitcode -no-color -out=${{ inputs.environment }}-tfplandataorch -var-file="prod.tfvars")
+          TERRAFORM_PLAN=$(terraform plan -detailed-exitcode -no-color -out=${{ inputs.environment }}-tfplandataorch -var-file="../config/${{ inputs.environment }}.tfvars.json")
 
           delimiter="$(openssl rand -hex 8)"
           echo "summary<<${delimiter}" >> $GITHUB_OUTPUT
