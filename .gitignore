@@ -16,7 +16,6 @@ venv/*
 .idea
 .vscode
 .idx/dev.nix
-backend.tf
 backend-config.hcl
 credentials.json
 key.json
