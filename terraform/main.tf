@@ -50,6 +50,7 @@ resource "google_workflows_workflow" "workflows" {
   project         = var.project
   call_log_level  = var.workflows_log_level
   source_contents = data.local_file.workflow[each.value].content
+  deletion_protection = false
   depends_on = [data.local_file.workflow]
 }
 
